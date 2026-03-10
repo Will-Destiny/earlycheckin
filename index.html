@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GuestLaunch — Daily Ops</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;1,400&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #faf8f5;
+    --bg2: #f4f0ea;
+    --white: #ffffff;
+    --border: #e8e0d5;
+    --text: #2c2620;
+    --muted: #9e9087;
+    --early: #5a8a6a;
+    --early-light: #eef4f0;
+    --early-mid: #c4dbc9;
+    --late: #b07a4a;
+    --late-light: #faf3eb;
+    --late-mid: #e8cfa8;
+    --urgent: #c0444a;
+    --urgent-light: #fdf0f0;
+    --dot: #d4b896;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    min-height: 100vh;
+    padding: 24px 16px 60px;
+    max-width: 480px;
+    margin: 0 auto;
+  }
+  header { text-align: center; padding: 20px 0 28px; }
+  .logo {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 11px; font-weight: 400;
+    letter-spacing: 0.3em; color: var(--muted);
+    text-transform: uppercase; margin-bottom: 8px;
+  }
+  .date-display {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 36px; font-weight: 600;
+    line-height: 1; color: var(--text); margin-bottom: 4px;
+  }
+  .time-display { font-size: 13px; font-weight: 300; color: var(--muted); letter-spacing: 0.05em; }
+  .header-divider { margin: 20px auto 0; width: 40px; height: 1px; background: var(--dot); }
+
+  .cal-section { margin-bottom: 28px; }
+  .section-label {
+    font-size: 9px; font-weight: 500; letter-spacing: 0.22em;
+    text-transform: uppercase; color: var(--muted);
+    margin-bottom: 12px; text-align: center;
+  }
+  .key { display: flex; justify-content: center; gap: 16px; margin-bottom: 12px; }
+  .key-item { display: flex; align-items: center; gap: 5px; font-size: 10px; font-weight: 300; color: var(--muted); }
+  .key-dot { width: 7px; height: 7px; border-radius: 50%; }
+  .key-dot.early { background: var(--early); }
+  .key-dot.late { background: var(--late); }
+
+  .calendar { display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px; }
+  .cal-day {
+    background: var(--white);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 8px 4px 9px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.18s ease;
+    user-select: none;
+  }
+  .cal-day:hover { border-color: var(--dot); background: var(--bg2); transform: translateY(-1px); }
+  .cal-day.today { border-color: var(--dot); background: var(--bg2); }
+  .cal-day.today .cal-day-num { color: var(--late); }
+  .cal-day.selected {
+    border-color: var(--early);
+    background: var(--early-light);
+    box-shadow: 0 2px 12px rgba(90,138,106,0.15);
+    transform: translateY(-1px);
+  }
+  .cal-day-name { font-size: 8px; font-weight: 500; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); margin-bottom: 5px; }
+  .cal-day-num { font-family: 'Cormorant Garamond', serif; font-size: 18px; font-weight: 600; color: var(--text); line-height: 1; margin-bottom: 5px; }
+  .cal-dots { display: flex; justify-content: center; gap: 3px; min-height: 8px; }
+  .cal-dot { width: 5px; height: 5px; border-radius: 50%; }
+  .cal-dot.early { background: var(--early); }
+  .cal-dot.late { background: var(--late); }
+
+  .selected-day-label {
+    text-align: center;
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 15px;
+    color: var(--early);
+    margin: -16px 0 16px;
+    font-style: italic;
+    min-height: 20px;
+    transition: opacity 0.2s;
+  }
+
+  .cards-section { margin-bottom: 28px; }
+  .section-header { display: flex; align-items: center; justify-content: center; gap: 10px; margin-bottom: 14px; }
+  .section-line { flex: 1; height: 1px; background: var(--border); }
+  .section-title { font-size: 9px; font-weight: 500; letter-spacing: 0.22em; text-transform: uppercase; color: var(--muted); white-space: nowrap; }
+
+  .card {
+    background: var(--white); border: 1px solid var(--border);
+    border-radius: 16px; padding: 18px; margin-bottom: 10px;
+    position: relative; overflow: hidden;
+  }
+  .card::after {
+    content: ''; position: absolute; top: -20px; right: -20px;
+    width: 90px; height: 90px; border-radius: 50%; opacity: 0.06; pointer-events: none;
+  }
+  .card.early::after { background: var(--early); }
+  .card.late::after { background: var(--late); }
+  .card.urgent { background: var(--urgent-light); border-color: #f0c0c2; }
+  .card.urgent::after { background: var(--urgent); }
+
+  .card-badge {
+    display: inline-flex; align-items: center; gap: 5px;
+    font-size: 9px; font-weight: 500; letter-spacing: 0.12em;
+    text-transform: uppercase; padding: 4px 10px;
+    border-radius: 100px; margin-bottom: 12px;
+  }
+  .card-badge.early { background: var(--early-light); color: var(--early); border: 1px solid var(--early-mid); }
+  .card-badge.late { background: var(--late-light); color: var(--late); border: 1px solid var(--late-mid); }
+  .card-badge.urgent { background: var(--urgent-light); color: var(--urgent); border: 1px solid #f0c0c2; }
+
+  .card-main { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px; }
+  .guest-name { font-family: 'Cormorant Garamond', serif; font-size: 26px; font-weight: 600; line-height: 1; margin-bottom: 4px; }
+  .property { font-size: 12px; font-weight: 300; color: var(--muted); }
+  .countdown-box { text-align: right; }
+  .countdown { font-family: 'Cormorant Garamond', serif; font-size: 26px; font-weight: 600; line-height: 1; }
+  .countdown.early { color: var(--early); }
+  .countdown.late { color: var(--late); }
+  .countdown.urgent { color: var(--urgent); }
+  .countdown-label { font-size: 9px; font-weight: 300; color: var(--muted); letter-spacing: 0.1em; text-transform: uppercase; margin-top: 2px; }
+
+  .card-footer { display: flex; align-items: center; justify-content: space-between; padding-top: 12px; border-top: 1px solid var(--border); }
+  .time-new { font-size: 14px; font-weight: 500; color: var(--text); }
+  .time-std { font-size: 11px; font-weight: 300; color: var(--muted); margin-top: 2px; }
+  .card-date { font-size: 11px; font-weight: 300; color: var(--muted); text-align: right; }
+
+  .empty-state { text-align: center; padding: 28px 20px; background: var(--white); border: 1px solid var(--border); border-radius: 16px; }
+  .empty-icon { font-size: 22px; margin-bottom: 7px; }
+  .empty-text { font-size: 13px; font-weight: 300; color: var(--muted); }
+
+  .footer { text-align: center; font-size: 11px; font-weight: 300; color: var(--muted); letter-spacing: 0.05em; margin-top: 16px; }
+  .live-dot { display: inline-block; width: 5px; height: 5px; border-radius: 50%; background: var(--early); margin-right: 5px; vertical-align: middle; animation: pulse 2.5s infinite; }
+  @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">GuestLaunch</div>
+  <div class="date-display" id="date-display">—</div>
+  <div class="time-display" id="time-display">—</div>
+  <div class="header-divider"></div>
+</header>
+
+<div class="cal-section">
+  <div class="section-label">This Week</div>
+  <div class="key">
+    <div class="key-item"><div class="key-dot early"></div> Early check-in</div>
+    <div class="key-item"><div class="key-dot late"></div> Late check-out</div>
+  </div>
+  <div class="calendar" id="calendar"></div>
+</div>
+
+<div class="selected-day-label" id="selected-day-label"></div>
+
+<div class="cards-section">
+  <div class="section-header">
+    <div class="section-line"></div>
+    <div class="section-title" id="main-section-title">Today</div>
+    <div class="section-line"></div>
+  </div>
+  <div id="main-cards"></div>
+</div>
+
+<div class="cards-section" id="upcoming-section">
+  <div class="section-header">
+    <div class="section-line"></div>
+    <div class="section-title">Coming Up</div>
+    <div class="section-line"></div>
+  </div>
+  <div id="upcoming-cards"></div>
+</div>
+
+<div class="footer">
+  <span class="live-dot"></span>Updated <span id="last-updated">—</span>
+</div>
+
+<script>
+// ============================================================
+// DATA — COWORK UPDATES THIS BLOCK DAILY
+// type: "early" = early check-in, "late" = late check-out
+// ============================================================
+const BOOKINGS = [];
+const LAST_UPDATED = "10 Mar 2026, 6:40 PM";
+// ============================================================
+
+let selectedDateStr = null;
+
+function pad(n) { return String(n).padStart(2,'0'); }
+function toDateStr(d) { return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`; }
+function isToday(ds) { return ds === toDateStr(new Date()); }
+
+function getCountdown(dateStr, timeStr) {
+  const [h,m] = timeStr.split(':').map(Number);
+  const target = new Date(dateStr);
+  target.setHours(h,m,0,0);
+  const diff = target - new Date();
+  if (diff < 0) return { str: 'Passed', cls: 'urgent', passed: true };
+  const days = Math.floor(diff/86400000);
+  const hrs = Math.floor((diff%86400000)/3600000);
+  const mins = Math.floor((diff%3600000)/60000);
+  const urgent = days===0 && hrs<3;
+  if (days>0) return { str:`${days}d ${hrs}h`, cls:'late', passed:false };
+  if (hrs>0) return { str:`${pad(hrs)}h ${pad(mins)}m`, cls:urgent?'urgent':'early', passed:false };
+  return { str:`${pad(mins)}m`, cls:'urgent', passed:false };
+}
+
+function formatDate(ds) {
+  return new Date(ds).toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long'});
+}
+function formatDateShort(ds) {
+  return new Date(ds).toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long'});
+}
+
+function makeCard(b) {
+  const cd = getCountdown(b.date, b.time);
+  const cardCls = cd.cls==='urgent'?'urgent':b.type;
+  const icon = b.type==='early'?'🔑':'🚪';
+  const label = b.type==='early'?'Early Check-in':'Late Check-out';
+  const timeLabel = b.type==='early'?'Check-in at':'Check-out at';
+  return `
+    <div class="card ${cardCls}">
+      <span class="card-badge ${cardCls}">${icon} ${label}</span>
+      <div class="card-main">
+        <div>
+          <div class="guest-name">${b.guest}</div>
+          <div class="property">${b.property}</div>
+        </div>
+        <div class="countdown-box">
+          <div class="countdown ${cd.cls}">${cd.str}</div>
+          <div class="countdown-label">${cd.passed?'&nbsp;':'away'}</div>
+        </div>
+      </div>
+      <div class="card-footer">
+        <div>
+          <div class="time-new">${timeLabel} ${b.time}</div>
+          <div class="time-std">${b.std}</div>
+        </div>
+        ${!isToday(b.date)?`<div class="card-date">${formatDate(b.date)}</div>`:''}
+      </div>
+    </div>`;
+}
+
+function renderCalendar() {
+  const DAY_NAMES = ['Su','Mo','Tu','We','Th','Fr','Sa'];
+  const today = new Date(); today.setHours(0,0,0,0);
+  let html = '';
+  for (let i=0;i<7;i++) {
+    const d = new Date(today); d.setDate(today.getDate()+i);
+    const ds = toDateStr(d);
+    const hits = BOOKINGS.filter(b=>b.date===ds);
+    const dots = hits.map(b=>`<div class="cal-dot ${b.type}"></div>`).join('');
+    const isSelected = selectedDateStr === ds;
+    const isTodayDay = i === 0;
+    let cls = '';
+    if (isSelected) cls = 'selected';
+    else if (isTodayDay) cls = 'today';
+    html += `<div class="cal-day ${cls}" data-date="${ds}" onclick="selectDay('${ds}')">
+      <div class="cal-day-name">${DAY_NAMES[d.getDay()]}</div>
+      <div class="cal-day-num">${d.getDate()}</div>
+      <div class="cal-dots">${dots}</div>
+    </div>`;
+  }
+  document.getElementById('calendar').innerHTML = html;
+}
+
+function selectDay(ds) {
+  const todayStr = toDateStr(new Date());
+  if (selectedDateStr === ds) {
+    // Deselect — go back to default view
+    selectedDateStr = null;
+  } else {
+    selectedDateStr = ds;
+  }
+  renderCards();
+  renderCalendar();
+}
+
+function renderCards() {
+  const todayStr = toDateStr(new Date());
+  const labelEl = document.getElementById('selected-day-label');
+  const titleEl = document.getElementById('main-section-title');
+  const upcomingSection = document.getElementById('upcoming-section');
+  const mainCards = document.getElementById('main-cards');
+  const upcomingCards = document.getElementById('upcoming-cards');
+
+  if (selectedDateStr && selectedDateStr !== todayStr) {
+    // Viewing a specific future day
+    const dayBookings = BOOKINGS.filter(b => b.date === selectedDateStr);
+    labelEl.textContent = formatDateShort(selectedDateStr);
+    titleEl.textContent = 'That Day';
+    upcomingSection.style.display = 'none';
+
+    mainCards.innerHTML = dayBookings.length
+      ? dayBookings.map(makeCard).join('')
+      : `<div class="empty-state"><div class="empty-icon">🌿</div><div class="empty-text">Nothing on this day</div></div>`;
+  } else {
+    // Default — show today + coming up
+    selectedDateStr = null;
+    labelEl.textContent = '';
+    titleEl.textContent = 'Today';
+    upcomingSection.style.display = 'block';
+
+    const today = BOOKINGS.filter(b => isToday(b.date));
+    const upcoming = BOOKINGS.filter(b => !isToday(b.date));
+
+    mainCards.innerHTML = today.length
+      ? today.map(makeCard).join('')
+      : `<div class="empty-state"><div class="empty-icon">🌿</div><div class="empty-text">No early or late requests today</div></div>`;
+
+    upcomingCards.innerHTML = upcoming.length
+      ? upcoming.map(makeCard).join('')
+      : `<div class="empty-state"><div class="empty-icon">✨</div><div class="empty-text">Nothing coming up</div></div>`;
+  }
+}
+
+function render() {
+  const now = new Date();
+  const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+  const DAYS = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+  document.getElementById('date-display').textContent = `${DAYS[now.getDay()]}, ${now.getDate()} ${MONTHS[now.getMonth()]}`;
+  const h=now.getHours(), ampm=h>=12?'PM':'AM';
+  document.getElementById('time-display').textContent = `${pad(h%12||12)}:${pad(now.getMinutes())} ${ampm}`;
+  document.getElementById('last-updated').textContent = LAST_UPDATED || 'Not yet updated';
+  renderCalendar();
+  renderCards();
+}
+
+render();
+setInterval(render, 60000);
+</script>
+</body>
+</html>
